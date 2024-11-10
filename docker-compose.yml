@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  order-service:
+    build:
+      context: ./orderservice  # Context of build where Dockerfile is located
+      dockerfile: Dockerfile    # Dockerfile used for building the image
+
+    # This is not necessary since we include this image in the Dockerfile
+    # image: node:alpine 
+    container_name: order-service-container
+    
+    ports:
+      - 3333:3333 
+
+    volumes:
+      # Files in the current directory are mounted in /home/node/app in the container
+      - ./:/home/node/app
+
+    networks:
+      - mysql-order-network  # Creating network to connect to MySQL service
+
+    depends_on:
+      - mysql-service  # Ensuring mysql-service starts before order-service
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      retries: 3
+
+  mysql-service:
+    image: mysql:8.0
+    restart: always
+    container_name: mysql-container
+    ports:
+      - 3306:3306  # Mapping host port 3306 to container port 3306
+
+    environment:
+      # Environment variables for MySQL service configuration
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=database1
+      - MYSQL_USER=node
+      - MYSQL_PASSWORD=1234
+
+    volumes:
+      # Named volumes for persistent MySQL data storage
+      #- app-volume:/var/lib/mysql
+      #- app-volume-config:/etc/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Initialization script
+
+    networks:
+      - mysql-order-network  # Connecting to the same network
+
+networks:
+  mysql-order-network:
+    name: mysql-order-network
+
+#volumes:
+  #app-volume: {}  # Defining named volume for MySQL data
+  #app-volume-config: {}  # Defining named volume for MySQL config
